@@ -19,6 +19,8 @@ const expenseSchema = new mongoose.Schema(
       default: "equal",
     },
     splitDetails: [splitDetailSchema],
+    
+    groupId: { type: mongoose.Schema.Types.ObjectId, ref: "Group" },
     date: { type: Date, default: Date.now },
     notes: { type: String, default: "" },
   },

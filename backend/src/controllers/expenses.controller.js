@@ -16,6 +16,7 @@ export const createExpense = async (req, res, next) => {
       participants,
       splitType,
       splitDetails: computedSplits,
+        groupId: groupId || null,
     });
 
     res.status(201).json(expense);
@@ -51,6 +52,20 @@ export const getExpenseById = async (req, res, next) => {
     next(err);
   }
 };
+
+export const getGroupExpenses = async (req, res, next) => {
+  try {
+    const { groupId } = req.params;
+    const expenses = await Expense.find({ groupId })
+      .populate("paidBy", "name email")
+      .populate("participants", "name email")
+      .sort({ createdAt: -1 });
+    res.json(expenses);
+  } catch (err) {
+    next(err);
+  }
+};
+
 
 // Delete expense (only payer)
 export const deleteExpense = async (req, res, next) => {

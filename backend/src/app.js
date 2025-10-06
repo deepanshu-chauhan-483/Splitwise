@@ -11,6 +11,8 @@ import balancesRoutes from "./routes/balances.routes.js";
 import settlementsRoutes from "./routes/settlements.routes.js";
 import groupRoutes from "./routes/group.routes.js";
 
+
+
 const app = express();
 
 app.use(json());
