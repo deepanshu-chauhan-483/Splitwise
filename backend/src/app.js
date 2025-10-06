@@ -1,6 +1,10 @@
 import express, { json } from 'express';
 import cors from 'cors';
 
+import expenseRoutes from "./routes/expenses.routes.js";
+
+
+
 import authRoutes from './routes/auth.routes.js';
 import errorHandler from './middleware/error.middleware.js';
 
@@ -13,6 +17,7 @@ app.use(cors());
 app.get('/', (req, res) => res.send('API is up'));
 // auth routes
 app.use('/api/auth', authRoutes);
+app.use("/api/expenses", expenseRoutes);
 
 // central error handler
 app.use(errorHandler);
