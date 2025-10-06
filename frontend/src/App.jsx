@@ -7,6 +7,9 @@ import ExpensesList from "./pages/Expenses/ExpensesList";
 import ExpenseAdd from "./pages/Expenses/ExpenseAdd";
 import ExpenseDetails from "./pages/Expenses/ExpenseDetails";
 import Balances from "./pages/Balances";
+import GroupsList from "./pages/Groups/GroupsList";
+import GroupAdd from "./pages/Groups/GroupAdd";
+import GroupDetails from "./pages/Groups/GroupDetails";
 
 
 import { useSelector } from "react-redux";
@@ -59,6 +62,10 @@ export default function App() {
       />
 
       <Route path="/balances" element={<ProtectedRoute><Balances /></ProtectedRoute>} />
+
+      <Route path="/groups" element={<ProtectedRoute><GroupsList /></ProtectedRoute>} />
+<Route path="/groups/add" element={<ProtectedRoute><GroupAdd /></ProtectedRoute>} />
+<Route path="/groups/:id" element={<ProtectedRoute><GroupDetails /></ProtectedRoute>} />
 
 
       {/* Auth */}
