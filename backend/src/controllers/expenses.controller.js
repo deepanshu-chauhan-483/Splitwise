@@ -1,4 +1,4 @@
-import { Expense } from "../models/Expense.model.js";
+import  Expense  from "../models/Expense.model.js";
 import { calculateSplit } from "../utils/calculator.js";
 
 // Create expense

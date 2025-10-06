@@ -3,6 +3,8 @@ import mongoose from "mongoose";
 const splitDetailSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   amount: { type: Number, required: true },
+  groupId: { type: mongoose.Schema.Types.ObjectId, ref: "Group" },
+
 });
 
 const expenseSchema = new mongoose.Schema(
@@ -23,4 +25,5 @@ const expenseSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export const Expense = mongoose.model("Expense", expenseSchema);
+const Expense = mongoose.model("Expense", expenseSchema);
+export default Expense;

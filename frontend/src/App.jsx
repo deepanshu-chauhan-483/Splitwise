@@ -6,6 +6,8 @@ import Dashboard from "./pages/Dashboard";
 import ExpensesList from "./pages/Expenses/ExpensesList";
 import ExpenseAdd from "./pages/Expenses/ExpenseAdd";
 import ExpenseDetails from "./pages/Expenses/ExpenseDetails";
+import Balances from "./pages/Balances";
+
 
 import { useSelector } from "react-redux";
 
@@ -55,6 +57,9 @@ export default function App() {
           </ProtectedRoute>
         }
       />
+
+      <Route path="/balances" element={<ProtectedRoute><Balances /></ProtectedRoute>} />
+
 
       {/* Auth */}
       <Route path="/auth/login" element={<Login />} />
