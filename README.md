@@ -417,11 +417,13 @@ npm run dev
 
 ## Screenshots
 
-![Screenshot1](frontend/src/assets/Screenshot 2025-10-07 191132.png)
-![Screenshot2](frontend/src/assets/Screenshot 2025-10-07 191145.png)
-![Screenshot3](frontend/src/assets/Screenshot 2025-10-07 191200.png)
-![Screenshot4](frontend/src/assets/Screenshot 2025-10-07 191215.png)
-![Screenshot5](frontend/src/assets/Screenshot 2025-10-07 191230.png)
+![Screenshot](frontend/src/assets/Screenshot.png)
+![Screenshot0](frontend/src/assets/Screenshot0.png)
+![Screenshot1](frontend/src/assets/Screenshot1.png)
+![Screenshot2](frontend/src/assets/Screenshot2.png)
+![Screenshot3](frontend/src/assets/Screenshot3.png)
+![Screenshot4](frontend/src/assets/Screenshot4.png)
+![Screenshot5](frontend/src/assets/Screenshot5.png)
 
 ---
 
