@@ -23,13 +23,13 @@ export default function ExpenseCard({ expense, onDelete, onEdit }) {
         </span>
 
         {/* ✅ Safe edit handler */}
-        <button
+        {/* <button
           onClick={() => onEdit && onEdit(expense)} 
           aria-label="Edit expense"
           className="inline-flex items-center rounded-md px-2.5 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-200"
         >
           Edit
-        </button>
+        </button> */}
 
         <button
           onClick={() => onDelete && onDelete(expense._id)} 
