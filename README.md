@@ -392,14 +392,7 @@ npm run dev
 # Visit http://localhost:5173
 ```
 
----
 
-## Testing & Utilities
-
-* `create_settlement_test.js` — create settlement directly in DB
-* `api_settlement_test.js` — test authenticated API settlement flow
-
----
 
 ## Security & Production Considerations
 
@@ -425,6 +418,10 @@ npm run dev
 ## Screenshots
 
 ![Screenshot1](frontend/src/assets/Screenshot 2025-10-07 191132.png)
+![Screenshot2](frontend/src/assets/Screenshot 2025-10-07 191145.png)
+![Screenshot3](frontend/src/assets/Screenshot 2025-10-07 191200.png)
+![Screenshot4](frontend/src/assets/Screenshot 2025-10-07 191215.png)
+![Screenshot5](frontend/src/assets/Screenshot 2025-10-07 191230.png)
 
 ---
 
