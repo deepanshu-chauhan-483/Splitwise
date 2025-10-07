@@ -4,7 +4,8 @@ import {
   getAllExpenses,
   getExpenseById,
   deleteExpense,
-  getGroupExpenses
+  getGroupExpenses,
+  updateExpense
 } from "../controllers/expenses.controller.js";
 import authMiddleware from "../middleware/auth.middleware.js";
 
@@ -17,7 +18,7 @@ router.post("/", createExpense);
 router.get("/", getAllExpenses);
 router.get("/:id", getExpenseById);
 router.get("/group/:groupId", getGroupExpenses);
-
+router.put("/:id", authMiddleware, updateExpense);
 router.delete("/:id", deleteExpense);
 
 export default router;

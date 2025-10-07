@@ -1,159 +1,118 @@
-"use client"
+"use client";
 
-import { useEffect, useState, useMemo } from "react"
-import { useDispatch, useSelector } from "react-redux"
+import { useEffect, useState, useMemo } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import {
   fetchOverallBalances,
   fetchGroupBalances,
   suggestSettlements,
   recordSettlement,
-} from "../store/slices/balancesSlice"
-import { fetchGroups } from "../store/slices/groupsSlice"
-import userService from "../services/user.service"
-import SettlementView from "../components/SettlementView"
-
-/**
- * Balances page
- * - shows overall balances (mapped to user names when possible)
- * - allows selecting a group (from user's groups)
- * - fetches group balances, suggests settlements, allows recording settlement
- *
- * Assumptions:
- * - groupsSlice exposes `list` (array of groups)
- * - balancesSlice exposes overall (array), group (array), suggestions (array), loading (bool)
- * - userService.getAllUsers() returns array of users [{ _id, name, email }]
- * - suggestSettlements returns transactions with { from: { id, name }, to: { id, name }, amount }
- */
+} from "../store/slices/balancesSlice";
+import { fetchGroups } from "../store/slices/groupsSlice";
+import SettlementView from "../components/SettlementView";
 
 export default function Balances() {
-  const dispatch = useDispatch()
+  const dispatch = useDispatch();
 
-  // balances slice
-  const { overall, group: groupBalances, suggestions, loading } = useSelector((s) => s.balances)
+  // Redux slices
+  const { overall, group: groupBalances, suggestions, loading } = useSelector(
+    (s) => s.balances
+  );
+  const groups = useSelector((s) => s.groups?.list || []);
 
-  // groups slice
-  const groups = useSelector((s) => s.groups?.list || [])
+  // Local state
+  const [selectedGroupId, setSelectedGroupId] = useState("");
+  const [busyRecording, setBusyRecording] = useState(false);
 
-  // local state
-  const [selectedGroupId, setSelectedGroupId] = useState("")
-  const [usersMap, setUsersMap] = useState({}) // id -> user object
-  const [busyRecording, setBusyRecording] = useState(false)
-
-  // helpers
-  const toId = (u) => {
-    if (!u) return null
-    if (typeof u === "string") return u
-    if (u.id) return u.id
-    if (u._id) return String(u._id)
-    return null
-  }
-
-  // 1) initial load: groups + overall balances + users
+  // Load groups & overall balances initially
   useEffect(() => {
-    dispatch(fetchGroups()) // populate groups
-    dispatch(fetchOverallBalances()) // populate overall balances
-    // fetch all users so we can map user ids -> names for overall list
-    ;(async () => {
-      try {
-        const res = await userService.getAllUsers()
-        const users = res.data || []
-        const map = {}
-        users.forEach((u) => {
-          const id = toId(u)
-          if (id) map[id] = u
-        })
-        setUsersMap(map)
-      } catch (err) {
-        // don't crash the page if user list fails
-        console.warn("Failed to load users for name mapping", err)
-      }
-    })()
-  }, [dispatch])
+    dispatch(fetchGroups());
+    dispatch(fetchOverallBalances());
+  }, [dispatch]);
 
-  // 2) when groups are loaded, if no selectedGroupId pick first group automatically
+  // Auto-select first group once available
   useEffect(() => {
     if (!selectedGroupId && groups && groups.length > 0) {
-      setSelectedGroupId(groups[0]._id)
+      setSelectedGroupId(groups[0]._id);
     }
-  }, [groups, selectedGroupId])
+  }, [groups, selectedGroupId]);
 
-  // 3) when selectedGroupId changes, fetch group balances
+  // Fetch group balances when selected group changes
   useEffect(() => {
     if (selectedGroupId) {
-      dispatch(fetchGroupBalances(selectedGroupId))
-      // clear previous suggestions for clarity (optional)
-      // we don't clear suggestions via slice here - keep existing unless refreshed by suggestSettlements
+      dispatch(fetchGroupBalances(selectedGroupId));
     }
-  }, [dispatch, selectedGroupId])
+  }, [dispatch, selectedGroupId]);
 
   // Handlers
-  const handleSelectGroup = (e) => {
-    setSelectedGroupId(e.target.value)
-  }
+  const handleSelectGroup = (e) => setSelectedGroupId(e.target.value);
 
   const handleSuggest = () => {
-    if (!selectedGroupId) {
-      return alert("Please select a group to generate suggestions.")
-    }
-    dispatch(suggestSettlements(selectedGroupId))
-  }
+    if (!selectedGroupId) return alert("Select a group first.");
+    dispatch(suggestSettlements(selectedGroupId));
+  };
 
   const handleRecord = async (tx) => {
-    // tx expected shape: { from: { id, name }, to: { id, name }, amount }
-    if (!selectedGroupId) {
-      return alert("Please select a group before recording a settlement.")
-    }
-    if (!tx || !tx.from || !tx.to || !tx.amount) return
+  if (!selectedGroupId) return alert("Select a group first.");
+  if (!tx || !tx.from || !tx.to || !tx.amount) return;
 
-    const payload = {
-      groupId: selectedGroupId,
-      fromUser: tx.from.id || tx.from, // tolerate either string or object
-      toUser: tx.to.id || tx.to,
-      amount: tx.amount,
-    }
+  const payload = {
+    groupId: selectedGroupId,
+    fromUser: tx.from.id || tx.from,
+    toUser: tx.to.id || tx.to,
+    amount: tx.amount,
+  };
 
-    try {
-      setBusyRecording(true)
-      // recordSettlement is a thunk; unwrap to catch errors
-      // dispatch(recordSettlement(payload)).unwrap() requires thunk to return promise with unwrap; but we can use .then/.catch too
-      await dispatch(recordSettlement(payload)).unwrap()
-      alert("Settlement recorded successfully.")
-      // refresh balances and suggestions so UI stays in sync
-      dispatch(fetchGroupBalances(selectedGroupId))
-      dispatch(suggestSettlements(selectedGroupId))
-      dispatch(fetchOverallBalances())
-    } catch (err) {
-      console.error("Failed to record settlement:", err)
-      const message = (err && err.message) || "Failed to record settlement"
-      alert(message)
-    } finally {
-      setBusyRecording(false)
-    }
+  try {
+    setBusyRecording(true);
+    // unwrap so errors throw here
+    await dispatch(recordSettlement(payload)).unwrap();
+
+    // wait a tiny tick for backend to persist (usually not needed)
+    // but occasionally ensures race-safety with subsequent GETs:
+    await new Promise((r) => setTimeout(r, 150));
+
+    // refresh data AFTER successful record
+    await dispatch(fetchGroupBalances(selectedGroupId)).unwrap();
+    await dispatch(suggestSettlements(selectedGroupId)).unwrap();
+    await dispatch(fetchOverallBalances()).unwrap();
+
+    // friendly UX
+    alert("Settlement recorded and balances refreshed.");
+  } catch (err) {
+    console.error("recordSettlement error:", err);
+    alert(err?.message || "Failed to record settlement.");
+  } finally {
+    setBusyRecording(false);
   }
+};
 
-  // render helpers
-  const overallList = useMemo(() => overall || [], [overall])
-  const groupList = useMemo(() => groupBalances || [], [groupBalances])
-  const suggestionsList = useMemo(() => suggestions || [], [suggestions])
+
+  // Memoized lists
+  const overallList = useMemo(() => overall || [], [overall]);
+  const groupList = useMemo(() => groupBalances || [], [groupBalances]);
+  const suggestionsList = useMemo(() => suggestions || [], [suggestions]);
 
   return (
     <main className="mx-auto max-w-6xl space-y-6 px-4 py-8">
+      {/* HEADER */}
       <header>
         <h1 className="text-2xl font-bold text-slate-900">Balances</h1>
         <p className="mt-1 text-slate-600">
-          Review overall amounts and group balances. Select a group to view per-group balances and suggested
-          settlements.
+          Review your overall and group-wise balances, suggest settlements, and
+          record payments.
         </p>
       </header>
 
-      {/* Overall balances */}
+      {/* OVERALL BALANCES */}
       <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-900">Overall balances</h2>
+          <h2 className="text-lg font-semibold text-slate-900">
+            Overall balances
+          </h2>
           <button
             onClick={() => dispatch(fetchOverallBalances())}
-            className="text-sm text-blue-600 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 rounded"
-            aria-label="Refresh overall balances"
+            className="text-sm text-blue-600 hover:underline rounded focus-visible:ring-2 focus-visible:ring-blue-200"
           >
             Refresh
           </button>
@@ -167,38 +126,47 @@ export default function Balances() {
           ) : (
             <ul className="divide-y divide-slate-100">
               {overallList.map((b, i) => {
-                const userObj = b.user || usersMap[b.userId] || {}
-                const name = userObj.name || userObj.fullName || "Unknown User"
-                const email = userObj.email ? ` (${userObj.email})` : ""
-                const label = `${name}${email}`
+                const userObj = b.user || {};
+                const name = userObj.name || "Unknown User";
+                const email = userObj.email ? ` (${userObj.email})` : "";
+                const label = `${name}${email}`;
 
                 return (
-                  <li key={i} className="flex items-center justify-between py-2" aria-live="polite">
+                  <li
+                    key={i}
+                    className="flex items-center justify-between py-2"
+                  >
                     <span className="font-medium text-slate-900">{label}</span>
                     <span
-                      className={
-                        "rounded-full px-2.5 py-1 text-xs sm:text-sm font-medium ring-1 " +
-                        (b.amount > 0
+                      className={`rounded-full px-2.5 py-1 text-xs sm:text-sm font-medium ring-1 ${
+                        b.amount > 0
                           ? "bg-green-50 text-green-700 ring-green-200"
-                          : "bg-rose-50 text-rose-700 ring-rose-200")
-                      }
+                          : "bg-rose-50 text-rose-700 ring-rose-200"
+                      }`}
                     >
-                      {b.amount > 0 ? `Receivable ₹${b.amount}` : `Owes ₹${Math.abs(b.amount)}`}
+                      {b.amount > 0
+                        ? `Receivable ₹${b.amount}`
+                        : `Owes ₹${Math.abs(b.amount)}`}
                     </span>
                   </li>
-                )
+                );
               })}
             </ul>
           )}
         </div>
       </section>
 
-      {/* Group selector + balances & suggestions */}
+      {/* GROUP BALANCES + SETTLEMENTS */}
       <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-lg font-semibold text-slate-900">Group balances & settlements</h2>
+          <h2 className="text-lg font-semibold text-slate-900">
+            Group balances & settlements
+          </h2>
           <div className="flex items-center gap-3">
-            <label htmlFor="groupSelect" className="mr-2 hidden text-sm text-slate-600 sm:inline">
+            <label
+              htmlFor="groupSelect"
+              className="mr-2 hidden text-sm text-slate-600 sm:inline"
+            >
               Group:
             </label>
             <select
@@ -216,9 +184,11 @@ export default function Balances() {
             </select>
 
             <button
-              onClick={() => selectedGroupId && dispatch(fetchGroupBalances(selectedGroupId))}
+              onClick={() =>
+                selectedGroupId && dispatch(fetchGroupBalances(selectedGroupId))
+              }
               disabled={!selectedGroupId}
-              className={`inline-flex items-center rounded-md px-3 py-2 text-sm font-medium shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 ${
+              className={`inline-flex items-center rounded-md px-3 py-2 text-sm font-medium shadow-sm focus-visible:ring-2 focus-visible:ring-blue-200 ${
                 selectedGroupId
                   ? "bg-blue-600 text-white hover:bg-blue-700"
                   : "cursor-not-allowed bg-slate-100 text-slate-400"
@@ -230,7 +200,7 @@ export default function Balances() {
             <button
               onClick={handleSuggest}
               disabled={!selectedGroupId}
-              className={`inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-200 ${
+              className={`inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium focus-visible:ring-2 focus-visible:ring-blue-200 ${
                 selectedGroupId
                   ? "border-blue-200 bg-white text-blue-700 hover:bg-blue-50"
                   : "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
@@ -244,32 +214,40 @@ export default function Balances() {
         {/* Group balances list */}
         <div className="mt-4">
           {!selectedGroupId ? (
-            <p className="text-sm text-slate-600">Select a group to load balances and suggestions.</p>
+            <p className="text-sm text-slate-600">
+              Select a group to view balances.
+            </p>
           ) : groupList.length === 0 ? (
-            <p className="text-sm text-slate-600">No balances for this group.</p>
+            <p className="text-sm text-slate-600">
+              No balances for this group.
+            </p>
           ) : (
             <ul className="divide-y divide-slate-100">
               {groupList.map((b, i) => {
-                const userObj = b.user || {}
-                const name = userObj.name || "Unknown User"
-                const email = userObj.email ? ` (${userObj.email})` : ""
-                const label = `${name}${email}`
+                const userObj = b.user || {};
+                const name = userObj.name || "Unknown User";
+                const email = userObj.email ? ` (${userObj.email})` : "";
+                const label = `${name}${email}`;
 
                 return (
-                  <li key={i} className="flex items-center justify-between py-2">
+                  <li
+                    key={i}
+                    className="flex items-center justify-between py-2"
+                  >
                     <span className="font-medium text-slate-900">{label}</span>
                     <span
-                      className={
-                        "rounded-full px-2.5 py-1 text-xs sm:text-sm font-medium ring-1 " +
-                        (b.amount > 0
+                      className={`rounded-full px-2.5 py-1 text-xs sm:text-sm font-medium ring-1 ${
+                        b.amount > 0
                           ? "bg-green-50 text-green-700 ring-green-200"
-                          : "bg-rose-50 text-rose-700 ring-rose-200")
-                      }
+                          : "bg-rose-50 text-rose-700 ring-rose-200"
+                      }`}
                     >
-                      {b.amount > 0 ? `Receivable ₹${b.amount}` : `Owes ₹${Math.abs(b.amount)}`}
+                      {b.amount > 0
+                        ? `Receivable ₹${b.amount}`
+                        : `Owes ₹${Math.abs(b.amount)}`}
                     </span>
                   </li>
-                )
+                );
               })}
             </ul>
           )}
@@ -277,24 +255,31 @@ export default function Balances() {
 
         {/* Suggested settlements */}
         <div className="mt-6">
-          <h3 className="mb-2 font-semibold text-slate-900">Suggested settlements</h3>
+          <h3 className="mb-2 font-semibold text-slate-900">
+            Suggested settlements
+          </h3>
           {suggestionsList.length === 0 ? (
-            <p className="text-sm text-slate-600">No suggested transfers. Click "Suggest settlements" to compute.</p>
+            <p className="text-sm text-slate-600">
+              No suggestions yet. Click “Suggest settlements”.
+            </p>
           ) : (
             <div>
               <SettlementView
                 transactions={suggestionsList}
                 onRecord={(tx) => {
-                  // SettlementView will call onRecord with the transaction object (populated {from:{id,name},to:{...},amount})
-                  if (busyRecording) return
-                  handleRecord(tx)
+                  if (busyRecording) return;
+                  handleRecord(tx);
                 }}
               />
-              {busyRecording && <p className="mt-2 text-sm text-slate-500">Recording settlement...</p>}
+              {busyRecording && (
+                <p className="mt-2 text-sm text-slate-500">
+                  Recording settlement...
+                </p>
+              )}
             </div>
           )}
         </div>
       </section>
     </main>
-  )
+  );
 }

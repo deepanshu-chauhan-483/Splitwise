@@ -19,7 +19,7 @@ async function computeNetForGroup(groupId) {
     // Credit payer
     net[paidById] = (net[paidById] || 0) + amount;
 
-    // Debit each participant
+    // Debit participants
     for (const sd of exp.splitDetails || []) {
       const uid = sd.userId.toString();
       const share = Number(sd.amount) || 0;
@@ -31,7 +31,7 @@ async function computeNetForGroup(groupId) {
 }
 
 /* -------------------------------------------------------------------------- */
-/* 🔹 Helper: Apply recorded settlements                                      */
+/* 🔹 Helper: Apply recorded settlements to net balances                      */
 /*    Settlement reduces debt of fromUser and receivable of toUser            */
 /* -------------------------------------------------------------------------- */
 async function applySettlementsToNet(net, groupId) {
@@ -42,49 +42,62 @@ async function applySettlementsToNet(net, groupId) {
     const to = s.toUser.toString();
     const amt = Number(s.amount) || 0;
 
-    // fromUser has paid 'amt' to toUser
-    net[from] = (net[from] || 0) + amt; // reduces debt
-    net[to] = (net[to] || 0) - amt;     // reduces receivable
+    // fromUser pays -> debt reduced
+    net[from] = (net[from] || 0) + amt;
+    // toUser receives -> receivable reduced
+    net[to] = (net[to] || 0) - amt;
   }
 }
 
 /* -------------------------------------------------------------------------- */
 /* 🔹 GET /api/settlements/group/:groupId                                     */
-/*    Suggest optimal settlement transactions for the group                   */
+/*    Suggest optimized settlement transactions for the group                 */
 /* -------------------------------------------------------------------------- */
 export const suggestSettlements = async (req, res, next) => {
   try {
     const { groupId } = req.params;
+    if (!groupId) return res.status(400).json({ message: "groupId is required" });
 
-    if (!groupId) {
-      return res.status(400).json({ message: "groupId parameter is required" });
-    }
-
-    // Compute current net balances
+    // Compute up-to-date balances
     const net = await computeNetForGroup(groupId);
     await applySettlementsToNet(net, groupId);
 
-    // Run settlement optimization
+    // If everyone is settled (all near 0), still return empty set but indicate balanced
+    const allZero = Object.values(net).every(v => Math.abs(v) < 0.01);
+    if (allZero) {
+      return res.json({
+        message: "All members are settled up.",
+        groupId,
+        transactions: [],
+      });
+    }
+
+    // Optimize settlements again, even after multiple records
     const transactions = optimizeSettlements(net);
 
-    // Fetch user names
+    // Fetch involved users
     const userIds = [...new Set(transactions.flatMap(t => [t.from, t.to]))];
     const users = await User.find({ _id: { $in: userIds } }).select("name email _id").lean();
-
     const nameMap = Object.fromEntries(users.map(u => [u._id.toString(), u.name]));
 
+    // Populate user info
     const populated = transactions.map(t => ({
       from: { id: t.from, name: nameMap[t.from] || "Unknown" },
       to: { id: t.to, name: nameMap[t.to] || "Unknown" },
       amount: Number(t.amount.toFixed(2)),
     }));
 
-    return res.json({ groupId, transactions: populated });
+    return res.status(200).json({
+      message: "Suggested settlements generated successfully.",
+      groupId,
+      transactions: populated,
+    });
   } catch (err) {
     console.error("❌ Error in suggestSettlements:", err);
     next(err);
   }
 };
+
 
 /* -------------------------------------------------------------------------- */
 /* 🔹 POST /api/settlements/record                                            */
@@ -94,7 +107,7 @@ export const recordSettlement = async (req, res, next) => {
   try {
     const { groupId = null, fromUser, toUser, amount, note = "" } = req.body;
 
-    // Validation
+    // ✅ Validate input
     if (!fromUser || !toUser || !amount) {
       return res
         .status(400)
@@ -110,10 +123,10 @@ export const recordSettlement = async (req, res, next) => {
     if (isNaN(amt) || amt <= 0) {
       return res
         .status(400)
-        .json({ message: "amount must be a positive number." });
+        .json({ message: "Amount must be a positive number." });
     }
 
-    // Verify both users exist
+    // ✅ Verify users exist
     const [fromExists, toExists] = await Promise.all([
       User.exists({ _id: fromUser }),
       User.exists({ _id: toUser }),
@@ -122,7 +135,7 @@ export const recordSettlement = async (req, res, next) => {
       return res.status(404).json({ message: "One or both users not found." });
     }
 
-    // Record settlement
+    // ✅ Record settlement
     const createdBy = req.user?.id || null;
     const settlement = await Settlement.create({
       groupId,
@@ -133,9 +146,19 @@ export const recordSettlement = async (req, res, next) => {
       createdBy,
     });
 
+    // ✅ Immediately return updated group balances for UI sync
+    let updatedNet = await computeNetForGroup(groupId);
+    await applySettlementsToNet(updatedNet, groupId);
+
+    const updatedBalances = Object.entries(updatedNet).map(([uid, value]) => ({
+      userId: uid,
+      amount: Number(value.toFixed(2)),
+    }));
+
     return res.status(201).json({
       message: "Settlement recorded successfully.",
       settlement,
+      updatedBalances,
     });
   } catch (err) {
     console.error("❌ Error in recordSettlement:", err);

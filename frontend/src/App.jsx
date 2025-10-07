@@ -6,6 +6,7 @@ import Dashboard from "./pages/Dashboard";
 import ExpensesList from "./pages/Expenses/ExpensesList";
 import ExpenseAdd from "./pages/Expenses/ExpenseAdd";
 import ExpenseDetails from "./pages/Expenses/ExpenseDetails";
+import ExpenseEdit from "./pages/Expenses/ExpenseEdit";
 import Balances from "./pages/Balances";
 import GroupsList from "./pages/Groups/GroupsList";
 import GroupAdd from "./pages/Groups/GroupAdd";
@@ -114,6 +115,8 @@ export default function App() {
       />
       <Route path="/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
   <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+  
+  <Route path="/expenses/edit/:id" element={<ProtectedRoute><ExpenseEdit /></ProtectedRoute>} />
 
       {/* Auth */}
       <Route path="/auth/login" element={<Login />} />

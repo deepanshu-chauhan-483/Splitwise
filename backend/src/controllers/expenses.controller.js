@@ -55,6 +55,44 @@ export const getExpenseById = async (req, res, next) => {
   }
 };
 
+// Update expense
+export const updateExpense = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { description, amount, participants: reqParticipants, splitType, splitDetails, groupId } = req.body;
+    const userId = req.user.id;
+
+    const expense = await Expense.findById(id);
+    if (!expense) return res.status(404).json({ message: "Expense not found" });
+
+    // Only the payer can edit the expense
+    if (expense.paidBy.toString() !== userId)
+      return res.status(403).json({ message: "Not authorized to edit this expense" });
+
+    // Update logic
+    const participants = reqParticipants && reqParticipants.length ? reqParticipants : expense.participants;
+    const computedSplits = calculateSplit(amount, participants, splitType, splitDetails);
+
+    expense.description = description || expense.description;
+    expense.amount = amount || expense.amount;
+    expense.participants = participants;
+    expense.splitType = splitType || expense.splitType;
+    expense.splitDetails = computedSplits;
+    expense.groupId = groupId || expense.groupId;
+
+    await expense.save();
+
+    const updatedExpense = await Expense.findById(id)
+      .populate("paidBy", "name email")
+      .populate("participants", "name email");
+
+    res.json(updatedExpense);
+  } catch (err) {
+    next(err);
+  }
+};
+
+
 export const getGroupExpenses = async (req, res, next) => {
   try {
     const { groupId } = req.params;
