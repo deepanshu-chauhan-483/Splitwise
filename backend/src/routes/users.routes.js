@@ -1,12 +1,30 @@
 // users.routes.js
 import express from "express";
-import authMiddleware from "../middleware/auth.middleware.js";
-import { listUsers, getUserById } from "../controllers/users.controller.js";
+import multer from "multer";
+import { 
+  getAllUsers, 
+  getUserById, 
+  uploadAvatar 
+} from "../controllers/users.controller.js";
+import  authMiddleware  from "../middleware/auth.middleware.js";
 
 const router = express.Router();
+
+// Multer storage configuration
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, "uploads/avatars"),
+  filename: (req, file, cb) =>
+    cb(null, Date.now() + "-" + file.originalname.replace(/\s+/g, "")),
+});
+
+const upload = multer({ storage });
+
+// Apply authentication middleware to all routes
 router.use(authMiddleware);
 
-router.get("/", listUsers);
-router.get("/:id", getUserById);
+// User routes
+router.get("/", getAllUsers); // List all users
+router.get("/:id", getUserById); // Get user by ID
+router.post("/avatar", upload.single("avatar"), uploadAvatar); // Upload avatar
 
 export default router;

@@ -33,6 +33,8 @@ app.use("/api/expenses", expenseRoutes);
 app.use("/api/groups", groupRoutes);
 app.use("/api/balances", balancesRoutes);
 app.use("/api/settlements", settlementsRoutes);
+app.use("/uploads", express.static("uploads"));
+
 
 // error handler (last)
 app.use(errorHandler);
