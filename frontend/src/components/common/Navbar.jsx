@@ -1,28 +1,29 @@
-"use client"
+"use client";
 
-import { useMemo, useState } from "react"
-import { Link, NavLink } from "react-router-dom"
-import { useDispatch, useSelector } from "react-redux"
-import { logout } from "../../store/slices/authSlice"
+import { useMemo, useState } from "react";
+import { Link, NavLink, useLocation } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { logout } from "../../store/slices/authSlice";
 
-// tiny className joiner used as `cx` in the project
-const cx = (...parts) => parts.filter(Boolean).join(" ")
+const cx = (...parts) => parts.filter(Boolean).join(" ");
 
 const getInitials = (nameOrEmail = "") => {
-  if (!nameOrEmail) return ""
-  const parts = nameOrEmail.trim().split(/\s+/)
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-}
+  if (!nameOrEmail) return "";
+  const parts = nameOrEmail.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
 
 export default function Navbar() {
-  const dispatch = useDispatch()
-  const { user } = useSelector((s) => s.auth)
-  const [open, setOpen] = useState(false)
+  const dispatch = useDispatch();
+  const location = useLocation();
+  const { user } = useSelector((s) => s.auth);
+  const [open, setOpen] = useState(false);
 
-  const initials = useMemo(() => getInitials(user?.name || user?.email), [user])
-
-  const baseUrl = import.meta.env.VITE_API_BASE_URL ? import.meta.env.VITE_API_BASE_URL.replace("/api", "") : ""
+  const initials = useMemo(() => getInitials(user?.name || user?.email), [user]);
+  const baseUrl = import.meta.env.VITE_API_BASE_URL
+    ? import.meta.env.VITE_API_BASE_URL.replace("/api", "")
+    : "";
 
   const navLinks = [
     { label: "Dashboard", to: "/dashboard" },
@@ -31,10 +32,22 @@ export default function Navbar() {
     { label: "Balances", to: "/balances" },
     { label: "Users", to: "/users" },
     { label: "Profile", to: "/profile" },
-  ]
+  ];
+
+  // Generate breadcrumbs dynamically
+  const breadcrumbs = useMemo(() => {
+    const pathParts = location.pathname.split("/").filter(Boolean);
+    const paths = [];
+    pathParts.forEach((part, index) => {
+      const to = "/" + pathParts.slice(0, index + 1).join("/");
+      paths.push({ label: part.charAt(0).toUpperCase() + part.slice(1), to });
+    });
+    return paths;
+  }, [location.pathname]);
 
   return (
     <header className="sticky top-0 z-40 bg-blue-600 text-white shadow">
+      {/* Top Navigation Bar */}
       <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
         {/* Brand */}
         <Link
@@ -55,7 +68,7 @@ export default function Navbar() {
               className={({ isActive }) =>
                 cx(
                   "rounded-md px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60",
-                  isActive ? "bg-white/20 text-white" : "text-white/90 hover:bg-white/10 hover:text-white",
+                  isActive ? "bg-white/20 text-white" : "text-white/90 hover:bg-white/10 hover:text-white"
                 )
               }
               to={to}
@@ -71,13 +84,15 @@ export default function Navbar() {
                   user.avatarUrl
                     ? `${baseUrl}${user.avatarUrl}`
                     : `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                        user.name || user.email,
+                        user.name || user.email
                       )}&background=random`
                 }
                 alt="avatar"
                 className="w-8 h-8 rounded-full border"
               />
-              <span className="truncate max-w-[10rem] text-white/90">{user.name || user.email}</span>
+              <span className="truncate max-w-[10rem] text-white/90">
+                {user.name || user.email}
+              </span>
               <button
                 onClick={() => dispatch(logout())}
                 className="ml-2 rounded-md border border-white/20 px-3 py-1.5 text-white/90 transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
@@ -115,9 +130,32 @@ export default function Navbar() {
         </button>
       </nav>
 
+      {/* Breadcrumbs Section */}
+      <div className="bg-white border-t border-white/10">
+        <div className="mx-auto max-w-6xl px-4 py-2 text-sm">
+          <nav className="flex flex-wrap items-center text-blue-600">
+            <Link to="/dashboard" className="hover:text-blue-400 font-medium">
+              Home
+            </Link>
+            {breadcrumbs.map((crumb, i) => (
+              <span key={crumb.to} className="flex items-center">
+                <span className="mx-2 opacity-60">/</span>
+                {i === breadcrumbs.length - 1 ? (
+                  <span className="text-blue-600">{crumb.label}</span>
+                ) : (
+                  <Link to={crumb.to} className="hover:text-blue-400">
+                    {crumb.label}
+                  </Link>
+                )}
+              </span>
+            ))}
+          </nav>
+        </div>
+      </div>
+
       {/* Mobile Menu */}
       {open && (
-        <div className="bg-blue-700/95 border-t border-white/10 py-3 md:hidden">
+        <div className="bg-blue-400/95 border-t border-white/10 py-3 md:hidden">
           <div className="mx-4 flex flex-col gap-1">
             {navLinks.map(({ label, to }) => (
               <NavLink
@@ -127,7 +165,7 @@ export default function Navbar() {
                 className={({ isActive }) =>
                   cx(
                     "rounded-md px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60",
-                    isActive ? "bg-white/20 text-white" : "text-white/90 hover:bg-white/10",
+                    isActive ? "bg-white/20 text-white" : "text-white/90 hover:bg-white/10"
                   )
                 }
               >
@@ -142,12 +180,14 @@ export default function Navbar() {
                     <div className="h-8 w-8 flex items-center justify-center rounded-full bg-white/20 font-semibold">
                       {initials}
                     </div>
-                    <span className="truncate max-w-[8rem] text-white/90">{user.name || user.email}</span>
+                    <span className="truncate max-w-[8rem] text-white/90">
+                      {user.name || user.email}
+                    </span>
                   </div>
                   <button
                     onClick={() => {
-                      dispatch(logout())
-                      setOpen(false)
+                      dispatch(logout());
+                      setOpen(false);
                     }}
                     className="rounded-md border border-white/20 px-3 py-1.5 text-sm hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
                   >
@@ -168,5 +208,5 @@ export default function Navbar() {
         </div>
       )}
     </header>
-  )
+  );
 }
