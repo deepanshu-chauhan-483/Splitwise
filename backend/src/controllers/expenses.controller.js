@@ -1,11 +1,13 @@
-import  Expense  from "../models/Expense.model.js";
+import Expense from "../models/Expense.model.js";
 import { calculateSplit } from "../utils/calculator.js";
 
 // Create expense
 export const createExpense = async (req, res, next) => {
   try {
-    const { description, amount, participants, splitType, splitDetails } = req.body;
+    const { description, amount, participants: reqParticipants, splitType, splitDetails, groupId } = req.body;
     const paidBy = req.user.id;
+
+    const participants = reqParticipants && reqParticipants.length ? reqParticipants : [paidBy];
 
     const computedSplits = calculateSplit(amount, participants, splitType, splitDetails);
 
@@ -16,7 +18,7 @@ export const createExpense = async (req, res, next) => {
       participants,
       splitType,
       splitDetails: computedSplits,
-        groupId: groupId || null,
+      groupId: groupId || null,
     });
 
     res.status(201).json(expense);

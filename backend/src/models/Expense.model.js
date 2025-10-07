@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const splitDetailSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   amount: { type: Number, required: true },
-  groupId: { type: mongoose.Schema.Types.ObjectId, ref: "Group" },
+  groupId: { type: mongoose.Schema.Types.ObjectId, ref: "Group", default: null },
 
 });
 
@@ -20,7 +20,7 @@ const expenseSchema = new mongoose.Schema(
     },
     splitDetails: [splitDetailSchema],
     
-    groupId: { type: mongoose.Schema.Types.ObjectId, ref: "Group" },
+    groupId: { type: mongoose.Schema.Types.ObjectId, ref: "Group", default: null },
     date: { type: Date, default: Date.now },
     notes: { type: String, default: "" },
   },

@@ -9,4 +9,5 @@ const settlementSchema = new mongoose.Schema({
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }
 }, { timestamps: true });
 
-export const Settlement = mongoose.model("Settlement", settlementSchema);
+const Settlement = mongoose.model("Settlement", settlementSchema);
+export default Settlement;

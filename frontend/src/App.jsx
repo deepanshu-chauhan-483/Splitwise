@@ -10,7 +10,9 @@ import Balances from "./pages/Balances";
 import GroupsList from "./pages/Groups/GroupsList";
 import GroupAdd from "./pages/Groups/GroupAdd";
 import GroupDetails from "./pages/Groups/GroupDetails";
-
+import ProtectedLayout from "./components/common/ProtectedLayout";
+import Users from "./pages/Users";
+import Profile from "./pages/Profile";
 
 import { useSelector } from "react-redux";
 
@@ -30,7 +32,9 @@ export default function App() {
         path="/dashboard"
         element={
           <ProtectedRoute>
-            <Dashboard />
+            <ProtectedLayout>
+              <Dashboard />
+            </ProtectedLayout>
           </ProtectedRoute>
         }
       />
@@ -40,7 +44,9 @@ export default function App() {
         path="/expenses"
         element={
           <ProtectedRoute>
-            <ExpensesList />
+            <ProtectedLayout>
+              <ExpensesList />
+            </ProtectedLayout>
           </ProtectedRoute>
         }
       />
@@ -48,7 +54,9 @@ export default function App() {
         path="/expenses/add"
         element={
           <ProtectedRoute>
-            <ExpenseAdd />
+            <ProtectedLayout>
+              <ExpenseAdd />
+            </ProtectedLayout>
           </ProtectedRoute>
         }
       />
@@ -56,17 +64,56 @@ export default function App() {
         path="/expenses/:id"
         element={
           <ProtectedRoute>
-            <ExpenseDetails />
+            <ProtectedLayout>
+              <ExpenseDetails />
+            </ProtectedLayout>
           </ProtectedRoute>
         }
       />
 
-      <Route path="/balances" element={<ProtectedRoute><Balances /></ProtectedRoute>} />
+      <Route
+        path="/balances"
+        element={
+          <ProtectedRoute>
+            <ProtectedLayout>
+              <Balances />
+            </ProtectedLayout>
+          </ProtectedRoute>
+        }
+      />
 
-      <Route path="/groups" element={<ProtectedRoute><GroupsList /></ProtectedRoute>} />
-<Route path="/groups/add" element={<ProtectedRoute><GroupAdd /></ProtectedRoute>} />
-<Route path="/groups/:id" element={<ProtectedRoute><GroupDetails /></ProtectedRoute>} />
-
+      <Route
+        path="/groups"
+        element={
+          <ProtectedRoute>
+            <ProtectedLayout>
+              <GroupsList />
+            </ProtectedLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/groups/add"
+        element={
+          <ProtectedRoute>
+            <ProtectedLayout>
+              <GroupAdd />
+            </ProtectedLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/groups/:id"
+        element={
+          <ProtectedRoute>
+            <ProtectedLayout>
+              <GroupDetails />
+            </ProtectedLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route path="/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
+  <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 
       {/* Auth */}
       <Route path="/auth/login" element={<Login />} />
@@ -77,4 +124,3 @@ export default function App() {
     </Routes>
   );
 }
-

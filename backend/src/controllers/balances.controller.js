@@ -58,6 +58,17 @@ export const getGroupBalances = async (req, res, next) => {
       .populate("participants", "name email");
 
     const net = computeNetFromExpenses(expenses);
+    // apply recorded settlements so balances reflect payments already made
+    const Settlement = (await import("../models/Settlement.model.js")).default;
+    const settlements = await Settlement.find({ groupId });
+    for (const s of settlements) {
+      const from = s.fromUser.toString();
+      const to = s.toUser.toString();
+      const amt = Number(s.amount);
+      // from paid amt to to: increase from net (less debt), decrease to net (less receivable)
+      net[from] = (net[from] || 0) + amt;
+      net[to] = (net[to] || 0) - amt;
+    }
 
     // Build user info map from expenses
     const usersMap = {};
@@ -97,6 +108,16 @@ export const suggestGroupSettlements = async (req, res, next) => {
 
     const expenses = await Expense.find({ groupId });
     const net = computeNetFromExpenses(expenses);
+    // apply recorded settlements to ensure suggestions account for already recorded payments
+    const SettlementModel = (await import("../models/Settlement.model.js")).default;
+    const recorded = await SettlementModel.find({ groupId });
+    for (const s of recorded) {
+      const from = s.fromUser.toString();
+      const to = s.toUser.toString();
+      const amt = Number(s.amount);
+      net[from] = (net[from] || 0) + amt;
+      net[to] = (net[to] || 0) - amt;
+    }
     const transactions = optimizeSettlements(net);
 
     // Optional: attach user names
